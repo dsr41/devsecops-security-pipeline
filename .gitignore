@@ -22,3 +22,5 @@ reports/*.html
 .pytest_cache/
 .coverage
 htmlcov/
+# Security scanner binaries
+tools/

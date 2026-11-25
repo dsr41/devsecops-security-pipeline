@@ -1,0 +1,6 @@
+detectors:
+  - name: LocalDemoToken
+    keywords:
+      - demo_token
+    regex:
+      token: '([A-Za-z0-9]{40})'

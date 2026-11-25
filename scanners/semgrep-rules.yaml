@@ -1,0 +1,22 @@
+
+rules:
+  - id: python.sql-injection-f-string
+    languages:
+      - python
+    severity: ERROR
+    message: "Potential SQL injection: SQL query constructed using an f-string."
+    metadata:
+      category: security
+      cwe: "CWE-89"
+    pattern-regex: '(?i)\bquery\s*=\s*f["\x27].*\bSELECT\b'
+
+  - id: python.command-injection-shell-true
+    languages:
+      - python
+    severity: ERROR
+    message: "Potential command injection: subprocess executed with shell=True."
+    metadata:
+      category: security
+      cwe: "CWE-78"
+    patterns:
+      - pattern: subprocess.$FUNC(..., shell=True, ...)
