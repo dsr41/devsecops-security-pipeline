@@ -1,0 +1,117 @@
+
+name: DevSecOps Security Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    name: Run Security Scanners
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+
+    steps:
+     
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      
+      - name: Install Semgrep
+        run: |
+          pip install semgrep
+
+      - name: Install TruffleHog
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Run TruffleHog
+        run: |
+          mkdir -p reports
+          trufflehog filesystem sample-app/ \
+            --config=scanners/trufflehog-config.yaml \
+            --fail-on-scan-errors \
+            --json > reports/trufflehog.json
+          
+      - name: Install OSV-Scanner
+        run: |
+          curl -fsSL \
+            https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64 \
+            -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Run OSV-Scanner
+        run: |
+          set +e
+          osv-scanner scan source \
+            --lockfile requirements.txt \
+            --format json \
+            --output-file reports/osv-report.json
+
+          SCAN_EXIT_CODE=$?
+          set -e
+
+          if [ "$SCAN_EXIT_CODE" -gt 1 ]; then
+            echo "OSV-Scanner execution failed."
+            exit "$SCAN_EXIT_CODE"
+          fi
+
+          echo "OSV-Scanner completed."
+      
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.deb
+          sudo dpkg -i trivy_0.76.2_Linux-64bit.deb
+          trivy --version
+      
+      - name: Run Trivy
+        run: |
+          trivy fs \
+            --scanners vuln,misconfig,secret \
+            --format json \
+            --output reports/trivy-report.json \
+            .
+      - name: Run Semgrep
+        run: |
+          python scripts/run_semgrep.py
+        
+      - name: Generate Unified Security Report
+        run: |
+          python scripts/generate_report.py
+
+      - name: Generate HTML Security Dashboard
+        run: |
+          python scripts/generate_dashboard.py
+        
+      - name: Upload Security Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devsecops-security-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 30

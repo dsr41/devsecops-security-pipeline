@@ -108,26 +108,52 @@ def parse_trivy():
     data = load_json(path)
 
     for result in data.get("Results", []):
-        for vulnerability in result.get("Vulnerabilities", []):
+        target = result.get("Target", "Unknown")
+
+        # 1. Dependency vulnerabilities
+        for item in result.get("Vulnerabilities") or []:
             findings.append({
                 "scanner": "Trivy",
                 "type": "Dependency Vulnerability",
                 "severity": normalize_severity(
-                    "Trivy",
-                    vulnerability.get("Severity", "UNKNOWN")
+                    "Trivy", item.get("Severity", "UNKNOWN")
                 ),
-                "title": vulnerability.get(
-                    "VulnerabilityID", "Unknown vulnerability"
-                ),
-                "package": vulnerability.get("PkgName", "Unknown"),
-                "version": vulnerability.get(
-                    "InstalledVersion", "Unknown"
-                ),
-                "file": result.get("Target", "Unknown"),
+                "title": item.get("VulnerabilityID", "Unknown vulnerability"),
+                "package": item.get("PkgName", "Unknown"),
+                "version": item.get("InstalledVersion", "Unknown"),
+                "file": target,
                 "line": 0,
-                "description": vulnerability.get(
+                "description": item.get(
                     "Description", "Dependency vulnerability detected."
                 )
+            })
+
+        # 2. Infrastructure/configuration misconfigurations
+        for item in result.get("Misconfigurations") or []:
+            findings.append({
+                "scanner": "Trivy",
+                "type": "Misconfiguration",
+                "severity": normalize_severity(
+                    "Trivy", item.get("Severity", "UNKNOWN")
+                ),
+                "title": item.get("Title") or item.get("ID", "Misconfiguration"),
+                "file": target,
+                "line": item.get("CauseMetadata", {}).get("StartLine", 0),
+                "description": item.get("Description", "")
+            })
+
+        # 3. Secret findings
+        for item in result.get("Secrets") or []:
+            findings.append({
+                "scanner": "Trivy",
+                "type": "Secret Detection",
+                "severity": normalize_severity(
+                    "Trivy", item.get("Severity", "UNKNOWN")
+                ),
+                "title": item.get("Title") or item.get("RuleID", "Secret detected"),
+                "file": target,
+                "line": item.get("StartLine", 0),
+                "description": item.get("Match", "Potential secret detected.")
             })
 
     return findings
@@ -138,7 +164,10 @@ def normalize_severity(scanner, severity):
     """Convert scanner-specific severity into a common format."""
 
     if scanner == "OSV-Scanner":
-        score = float(severity)
+        try:
+            score = float(severity or 0)
+        except (TypeError, ValueError):
+            score = 0.0
 
         if score >= 9.0:
             return "CRITICAL"
