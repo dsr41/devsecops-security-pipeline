@@ -1,26 +1,34 @@
-# Python
-__pycache__/
-*.py[cod]
-
-# Virtual environments
+# Python virtual environments
 .venv/
 venv/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Environment variables and secrets
 .env
 .env.*
 !.env.example
 
-# IDE
+# IDE and editor files
 .vscode/
+.idea/
 
-# Generated reports
-reports/*.json
-reports/*.html
-
-# Testing and coverage
+# Test and coverage files
 .pytest_cache/
 .coverage
 htmlcov/
-# Security scanner binaries
+
+# Generated security reports
+reports/*.json
+reports/*.html
+
+# Scanner binaries and downloaded tools
 tools/
+
+# Operating system files
+.DS_Store
+Thumbs.db
