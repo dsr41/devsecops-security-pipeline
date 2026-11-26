@@ -127,20 +127,22 @@ devsecops-security-pipeline/
 │   └── app.py
 │
 ├── scanners/
+│   ├── run_osv.py
 │   ├── semgrep-rules.yaml
 │   └── trufflehog-config.yaml
 │
 ├── scripts/
-│   ├── run_semgrep.py
+│   ├── generate_dashboard.py
 │   ├── generate_report.py
-│   └── generate_dashboard.py
+│   └── run_semgrep.py
 │
-├── requirements.txt
+├── screenshots/
+│   └── dashboard.png
+│
 ├── .gitignore
-└── README.md
+├── README.md
+└── requirements.txt
 ```
-
-Additional scanner configuration and runner files may also be present in the `scanners/` directory.
 
 ## ⚙️ How It Works
 
